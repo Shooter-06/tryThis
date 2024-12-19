@@ -1,0 +1,34 @@
+
+my $fusionSoapClient;
+eval {
+    $fusionSoapClient = Fusion::Util::SOAP->new($soapParams);
+    $fusionSoapClient->soap_connect($soapParams);
+};
+
+if ($@) {
+    # Log the fatal error
+    $LOG->fatal("Connection failed: Unable to connect to port $soapParams->{port}: $@");
+
+    # Attempt to recover (use a backup port if available)
+    if ($trendService->{BackupPort}) {
+        $LOG->info("Retrying with backup port $trendService->{BackupPort}...");
+        $soapParams->{port} = $trendService->{BackupPort};
+        eval {
+            $fusionSoapClient = Fusion::Util::SOAP->new($soapParams);
+            $fusionSoapClient->soap_connect($soapParams);
+        };
+        
+        if ($@) {
+            $LOG->fatal("Backup connection failed on port $trendService->{BackupPort}: $@");
+            # Exit or notify for manual intervention
+            die "Fatal: All connection attempts failed.\n";
+        } else {
+            $LOG->info("Successfully connected using backup port $trendService->{BackupPort}.");
+        }
+    } else {
+        $LOG->fatal("No backup port configured. Connection cannot be established.");
+        die "Fatal: No backup port available.\n";
+    }
+} else {
+    $LOG->info("Connection successfully established on port $soapParams->{port}.");
+}
