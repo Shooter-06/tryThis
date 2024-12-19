@@ -1,0 +1,30 @@
+# Initialize variables for tries and attempts
+my $max_tries = 3;     # Define the maximum number of tries
+my $current_try = 0;   # Counter for current attempt
+
+# Attempt connection
+while ($current_try < $max_tries) {
+    $current_try++;
+    $LOG->info("Attempt #$current_try to connect to port $soapParams->{port}...");
+
+    eval {
+        $fusionSoapClient = Fusion::Util::SOAP->new($soapParams);
+        $fusionSoapClient->soap_connect($soapParams);
+    };
+
+    if ($@) {
+        my $error_message = $@;
+        $LOG->error("Attempt #$current_try failed: $error_message");
+
+        # Retry logic or exit if maximum tries reached
+        if ($current_try >= $max_tries) {
+            $LOG->fatal("All $max_tries attempts failed. Connection could not be established.");
+            die "Fatal: Unable to connect after $max_tries attempts.\n";
+        } else {
+            $LOG->info("Retrying connection (Attempt #$current_try of $max_tries)...");
+        }
+    } else {
+        $LOG->info("Connection successfully established on Attempt #$current_try.");
+        last;
+    }
+}
